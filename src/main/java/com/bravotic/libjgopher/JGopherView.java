@@ -113,32 +113,37 @@ public class JGopherView extends JTextPane{
                
                 if (server != null && dir != null && port != null && type != null) {
 
-                    try {
-                        if(type.equals("1")){
-                            view.setText("");
-                            
-                            // Below WILL be changed very soon, as soon as I can
-                            // figure out a way for it to seamlessly implement
-                            // into what I already have.  I should NOT be running
-                            // network connections on the main thread, I am fully
-                            // aware of this.
-                            renderGopher(server, dir, port);
+                    if (type.equals("1")) {
+                        view.setText("");
+                        
+                        Thread render = new Thread(() -> {
+                            try {
+                                renderGopher(server, dir, port);
+                            } catch (BadLocationException ex) {
+                                Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+                            }
                             url = "gopher://" + server + "/" + type + dir;
                             runUpdateUrlMethods();
                             view.setCaretPosition(0);
-                        }
-                        else{
+                        });
+                        render.start();
+                    } else {
+                        Thread render = new Thread(() -> {
                             view.setText("");
-                            renderFile(server, dir, port);
+                            try {
+                                renderFile(server, dir, port);
+                            } catch (IOException | BadLocationException ex) {
+                                Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+                            }
                             view.setCaretPosition(0);
                             url = "gopher://" + server + "/" + type + dir;
                             runUpdateUrlMethods();
-                        }
-                        validate();
-                    } catch (BadLocationException | IOException ex) {
-                        Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+                        });
+                        render.start();
+                        
                     }
-                    
+                    validate();
+
                 }
     
             }
