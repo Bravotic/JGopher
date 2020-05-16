@@ -62,6 +62,8 @@ public class JGopherView extends JTextPane{
     
     private JPanel parent;
     
+    private String search;
+    
     // Eventually users will be able to specify this
     private int fontsize = 14;
     
@@ -136,7 +138,12 @@ public class JGopherView extends JTextPane{
                     }  
                     else if(type.equals("7")){
                         view.setText("");
-                        String search = JOptionPane.showInputDialog(parent,"Enter a search query: ", null);
+                        search = JOptionPane.showInputDialog(parent,"Enter a search query: ", null);
+                        
+                        if(search == null){
+                            search = "";
+                        }
+                        
                         Thread render = new Thread(() -> {
                             try {
                                 
