@@ -59,7 +59,7 @@ public class Client extends JPanel implements ActionListener{
         urlBar.setText("gopher://floodgap.com/");
         
         
-        gviewer = new JGopherView();
+        gviewer = new JGopherView(this);
         
         // Eventually renderGopher will be replaced with a method able to decode
         // gopher URLs, probably something like gotoUrl or loadUrl.  As well an

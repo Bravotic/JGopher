@@ -28,6 +28,8 @@ import javax.swing.JLabel;
 import java.lang.reflect.Method;
 import java.awt.Cursor;
 import java.lang.reflect.InvocationTargetException;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 
 public class JGopherView extends JTextPane{
     
@@ -58,6 +60,8 @@ public class JGopherView extends JTextPane{
     private Cursor normal;
     private Cursor load;
     
+    private JPanel parent;
+    
     // Eventually users will be able to specify this
     private int fontsize = 14;
     
@@ -77,7 +81,7 @@ public class JGopherView extends JTextPane{
         url = in_url;
     }
     
-    public JGopherView(){
+    public JGopherView(JPanel parentPanel){
         setContentType("text/html");
         try{
             loadImages();
@@ -85,6 +89,8 @@ public class JGopherView extends JTextPane{
         catch (IOException e){
             Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, e);
         }
+        
+        parent = parentPanel;
         
         methods = new ArrayList<>();
         classobjs = new ArrayList<>();
@@ -127,7 +133,24 @@ public class JGopherView extends JTextPane{
                             view.setCaretPosition(0);
                         });
                         render.start();
-                    } else {
+                    }  
+                    else if(type.equals("7")){
+                        view.setText("");
+                        String search = JOptionPane.showInputDialog(parent,"Enter a search query: ", null);
+                        Thread render = new Thread(() -> {
+                            try {
+                                
+                                renderGopher(server, dir + "?" + search, port);
+                            } catch (BadLocationException ex) {
+                                Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                            url = "gopher://" + server + "/" + type + dir + "?" + search;
+                            runUpdateUrlMethods();
+                            view.setCaretPosition(0);
+                        });
+                        render.start();
+                    }
+                    else {
                         Thread render = new Thread(() -> {
                             view.setText("");
                             try {
