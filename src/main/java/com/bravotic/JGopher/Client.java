@@ -1,6 +1,9 @@
 package com.bravotic.JGopher;
 
+import com.bravotic.libjgopher.GopherConnectionEvent;
+import com.bravotic.libjgopher.GopherHoverEvent;
 import com.bravotic.libjgopher.GopherURL;
+import com.bravotic.libjgopher.GopherUrlEvent;
 import com.bravotic.libjgopher.JGopherView;
 import java.awt.BorderLayout;
 import java.io.IOException;
@@ -18,10 +21,20 @@ import javax.swing.text.BadLocationException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.Dimension;
+import java.util.ArrayList;
+import javax.swing.Box;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JProgressBar;
+import javax.swing.UIManager;
+import javax.swing.UIManager.LookAndFeelInfo;
+import javax.swing.UnsupportedLookAndFeelException;
 
 public class Client extends JPanel implements ActionListener{
     private JTextField urlBar = new JTextField(30);
     private JGopherView gviewer;
+    
+    private boolean inConnectionEvent;
     
     //private ArrayList<GopherURL> history;
     //private int placeInHistory;
@@ -29,7 +42,27 @@ public class Client extends JPanel implements ActionListener{
     public Client() throws BadLocationException, IOException{
     
         super(new BorderLayout());
+        inConnectionEvent = false;
+        ArrayList<String> lookAndFeelsDisplay = new ArrayList<>();
+        ArrayList<String> lookAndFeelsRealNames = new ArrayList<>();
+
+        for (LookAndFeelInfo each : UIManager.getInstalledLookAndFeels()) {
+            lookAndFeelsDisplay.add(each.getName());
+            lookAndFeelsRealNames.add(each.getClassName());
+        }
+
+        
         JToolBar navBar = new JToolBar("NavBar");
+        JToolBar statusBar = new JToolBar("StatusBar");
+        
+        
+        JProgressBar progressBar = new JProgressBar(0, 100);
+        progressBar.setValue(0);
+        progressBar.setMaximumSize(new Dimension(125, 125));
+        //progressBar.setIndeterminate(true);
+        JLabel status = new JLabel();
+        
+
         
         // History related functions are coming later, I have been on and off
         // testing them for a while so take these as maybe a preview for the 
@@ -55,7 +88,9 @@ public class Client extends JPanel implements ActionListener{
         navBar.add(forward);
         navBar.add(urlBar);
         navBar.add(go);
-        
+        statusBar.add(progressBar);
+        statusBar.add(status);
+
         urlBar.setText("gopher://floodgap.com/");
         
         
@@ -66,12 +101,48 @@ public class Client extends JPanel implements ActionListener{
         // option to set homepage will eventaully be added to the client, but
         // for now floodgap is the homepage.
         gviewer.renderGopher("floodgap.com", "/", "70");
-        gviewer.addUrlUpdateMethod(this, "updateUrlBar");
+        //gviewer.addUrlUpdateMethod(this, "updateUrlBar");
+        gviewer.addEvent(new GopherUrlEvent(){
+           public void run(){
+               urlBar.setText(gviewer.getURL());
+           } 
+        });
+        
+        gviewer.addEvent(new GopherConnectionEvent(){
+            public void connecting(){
+                inConnectionEvent = true;
+                status.setText("    Connecting to " + gviewer.getURL()+"...");
+                progressBar.setValue(33);
+            }
+            public void rendering(){
+                status.setText("    Rendering " + gviewer.getURL() +"...");
+                progressBar.setValue(66);
+            }
+            public void finished(){
+                inConnectionEvent = false;
+                status.setText("    Done.");
+                progressBar.setValue(0);
+            }
+        });
+        
+        gviewer.addEvent(new GopherHoverEvent(){
+            public void hoverOn(){
+                if(!inConnectionEvent){
+                    status.setText("    " + gviewer.getHoveredURL());
+                }
+            }
+            public void hoverOff(){
+                if(!inConnectionEvent){
+                    status.setText("    Done.");
+                }
+            }
+        });
         gviewer.setCaretPosition(0);
         
         JScrollPane mainView = new JScrollPane(gviewer);
         add(navBar, BorderLayout.PAGE_START);
         add(mainView, BorderLayout.CENTER);
+        add(statusBar, BorderLayout.PAGE_END);
     }
     
     // Simply our method to update the URL bar at the top of the screen

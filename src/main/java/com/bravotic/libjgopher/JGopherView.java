@@ -31,10 +31,10 @@ import java.lang.reflect.InvocationTargetException;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
-public class JGopherView extends JTextPane{
-    
+public class JGopherView extends JTextPane {
+
     private Document doc;
-    
+
     // Images that we will render along side the selectors when we render the 
     // page.
     private Image file;
@@ -42,20 +42,24 @@ public class JGopherView extends JTextPane{
     private Image binhex;
     private Image binary;
     private Image blank;
-    
+
     // Attributes we will place on every selector, allows us to easily pull these
     // from a click and place them directly into the render gopher method.
     private QName gopherDir = new QName("dir");
     private QName gopherServer = new QName("server");
     private QName gopherPort = new QName("port");
     private QName gopherType = new QName("type");
-    
+
     // ArrayLists for both Methods and their respective Objects to call. Is this
     // an abuse of java?  Totally. Could I do it another way?  Of course.  Would
     // it be as fun?  Definately not.
     private final ArrayList<Method> methods;
     private final ArrayList<Object> classobjs;
     
+    private final ArrayList<GopherUrlEvent> urlEvents;
+    private final ArrayList<GopherConnectionEvent> connEvents;
+    private final ArrayList<GopherHoverEvent> hoverEvents;
+
     private Cursor pointer;
     private Cursor normal;
     private Cursor load;
@@ -63,81 +67,127 @@ public class JGopherView extends JTextPane{
     private JPanel parent;
     
     private String search;
-    
+
     // Eventually users will be able to specify this
     private int fontsize = 14;
-    
+
     private String url;
-    
-    public void runUpdateUrlMethods(){
-        for(int i = 0; i < methods.size(); i++){
-            try{
-                methods.get(i).invoke(classobjs.get(i));
-            }   
-            catch( IllegalAccessException | IllegalArgumentException | InvocationTargetException e){
-                Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, e);
-            }
+    private String hoverUrl;
+
+    private void runUpdateUrlMethods() {
+        for(GopherUrlEvent ev : urlEvents){
+            ev.run();
         }
     }
-    public void setUrlUpdate(String in_url){
+    
+    private void runConnecting(){
+        for(GopherConnectionEvent ev : connEvents){
+            ev.connecting();
+        }
+    }
+    
+    private void runRendering(){
+        for(GopherConnectionEvent ev : connEvents){
+            ev.rendering();
+        }
+    }
+    
+    private void runFinished(){
+        for(GopherConnectionEvent ev : connEvents){
+            ev.finished();
+        }
+    }
+    
+    private void runHoverOn(){
+        for(GopherHoverEvent ev : hoverEvents){
+            ev.hoverOn();
+        }
+    }
+    private void runHoverOff(){
+        for(GopherHoverEvent ev : hoverEvents){
+            ev.hoverOff();
+        }
+    }
+    
+    public void addEvent(GopherUrlEvent ev){
+        urlEvents.add(ev);
+    }
+    
+    public void addEvent(GopherConnectionEvent ev){
+        connEvents.add(ev);
+    }
+    
+    public void addEvent(GopherHoverEvent ev){
+        hoverEvents.add(ev);
+    }
+
+    public void setParent(JPanel tobeParent){
+        parent = tobeParent;
+    }
+    
+    public void setUrlUpdate(String in_url) {
         url = in_url;
     }
-    
-    public JGopherView(JPanel parentPanel){
+
+    public JGopherView(JPanel parentPanel) {
         setContentType("text/html");
-        try{
+        parent = parentPanel;
+        try {
             loadImages();
-        }
-        catch (IOException e){
+        } catch (IOException e) {
             Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, e);
         }
-        
-        parent = parentPanel;
-        
+
         methods = new ArrayList<>();
         classobjs = new ArrayList<>();
         
+        urlEvents = new ArrayList<>();
+        connEvents = new ArrayList<>();
+        hoverEvents = new ArrayList<>();
+
         pointer = new Cursor(Cursor.HAND_CURSOR);
         normal = new Cursor(Cursor.DEFAULT_CURSOR);
         load = new Cursor(Cursor.WAIT_CURSOR);
-        
+
         addMouseListener(new MouseAdapter() {
-             @Override
-             public void mouseClicked(MouseEvent e){
+            @Override
+            public void mouseClicked(MouseEvent e) {
                 JTextPane view = (JTextPane) e.getSource();
                 Point pt = new Point(e.getX(), e.getY());
-        
+
                 int clickpos = view.viewToModel(pt);
-        
+
                 Document doc = view.getDocument();
                 DefaultStyledDocument parsedoc = (DefaultStyledDocument) doc;
-        
+
                 Element tag = parsedoc.getCharacterElement(clickpos);
                 AttributeSet a = tag.getAttributes();
                 String server = (String) a.getAttribute(gopherServer);
                 String dir = (String) a.getAttribute(gopherDir);
                 String port = (String) a.getAttribute(gopherPort);
                 String type = (String) a.getAttribute(gopherType);
-               
+
                 if (server != null && dir != null && port != null && type != null) {
 
                     if (type.equals("1")) {
                         view.setText("");
                         
                         Thread render = new Thread(() -> {
+                            url = "gopher://" + server + "/" + type + dir;
                             try {
                                 renderGopher(server, dir, port);
                             } catch (BadLocationException ex) {
                                 Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
                             }
-                            url = "gopher://" + server + "/" + type + dir;
+                            
                             runUpdateUrlMethods();
                             view.setCaretPosition(0);
                         });
                         render.start();
-                    }  
+                    } 
                     else if(type.equals("7")){
                         view.setText("");
+                        
                         search = JOptionPane.showInputDialog(parent,"Enter a search query: ", null);
                         
                         if(search == null){
@@ -145,13 +195,14 @@ public class JGopherView extends JTextPane{
                         }
                         
                         Thread render = new Thread(() -> {
+                            url = "gopher://" + server + "/" + type + dir + "?" + search;
                             try {
                                 
                                 renderGopher(server, dir + "?" + search, port);
                             } catch (BadLocationException ex) {
                                 Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
                             }
-                            url = "gopher://" + server + "/" + type + dir + "?" + search;
+                            
                             runUpdateUrlMethods();
                             view.setCaretPosition(0);
                         });
@@ -160,13 +211,14 @@ public class JGopherView extends JTextPane{
                     else {
                         Thread render = new Thread(() -> {
                             view.setText("");
+                            url = "gopher://" + server + "/" + type + dir;
                             try {
                                 renderFile(server, dir, port);
                             } catch (IOException | BadLocationException ex) {
                                 Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
                             }
                             view.setCaretPosition(0);
-                            url = "gopher://" + server + "/" + type + dir;
+                            
                             runUpdateUrlMethods();
                         });
                         render.start();
@@ -175,17 +227,17 @@ public class JGopherView extends JTextPane{
                     validate();
 
                 }
-    
+
             }
         });
-        addMouseMotionListener(new MouseAdapter(){
-        @Override
-        public void mouseMoved(MouseEvent e){
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
                 JTextPane view = (JTextPane) e.getSource();
                 Point pt = new Point(e.getX(), e.getY());
-                
+
                 int pos = view.viewToModel(pt);
-                if(pos >= 0){
+                if (pos >= 0) {
                     Document page = view.getDocument();
                     DefaultStyledDocument spage = (DefaultStyledDocument) page;
                     Element tag = spage.getCharacterElement(pos);
@@ -194,41 +246,47 @@ public class JGopherView extends JTextPane{
                     String dir = (String) a.getAttribute(gopherDir);
                     String port = (String) a.getAttribute(gopherPort);
                     String type = (String) a.getAttribute(gopherType);
-               
+
                     if (server != null && dir != null && port != null && type != null) {
-                        
-                        if(getCursor() != pointer){
+
+                        if (getCursor() != pointer) {
                             setCursor(pointer);
+                            runHoverOn();
+                            hoverUrl = "gopher://" + server + "/" + type + dir;
                         }
-                    }
-                    else if (server == null && dir == null && port == null && type == null){
-                        if(getCursor() == pointer){
+                        
+                    } else if (server == null && dir == null && port == null && type == null) {
+                        if (getCursor() == pointer) {
                             setCursor(normal);
+                            runHoverOff();
                         }
                     }
                 }
-             }
+            }
         });
     }
-    
-    public void addUrlUpdateMethod(Object classobj, String method_name){
-        try{
+
+    public void addUrlUpdateMethod(Object classobj, String method_name) {
+        try {
             Method method = classobj.getClass().getMethod(method_name);
             methods.add(method);
             classobjs.add(classobj);
-        }
-        catch( NoSuchMethodException | SecurityException e){
+        } catch (NoSuchMethodException | SecurityException e) {
             Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, e);
         }
     }
-    
-    public String getURL(){
+
+    public String getURL() {
         return url;
     }
+
+    public String getHoveredURL() {
+        return hoverUrl;
+    }
     
-    public void renderGopher(String url, String dir, String port) throws BadLocationException{
-        
-            addFocusListener(new FocusListener() {
+    public void renderGopher(String url, String dir, String port) throws BadLocationException {
+
+        addFocusListener(new FocusListener() {
 
             @Override
             public void focusLost(FocusEvent e) {
@@ -243,6 +301,8 @@ public class JGopherView extends JTextPane{
             }
         });
         setCursor(load);
+
+        runConnecting();
         
         GopherConnection gc = new GopherConnection(url, dir, Integer.parseInt(port));
         try {
@@ -250,40 +310,38 @@ public class JGopherView extends JTextPane{
         } catch (IOException ex) {
             Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
         }
+        runRendering();
         GopherSelector[] sels = gc.ReadToGopherSelectorArray();
-        
+
         // History related functions are coming later, I have been on and off
         // testing them for a while so take these as maybe a preview for the 
         // future.
-        
         //history.add(new GopherURL(url, dir, Integer.parseInt(port)));
         //placeInHistory = history.size() - 1;
-        
         doc = getDocument();
-        for(GopherSelector sel : sels){
+        for (GopherSelector sel : sels) {
 
             StyleContext context = new StyleContext();
             Style labelStyle = context.getStyle(StyleContext.DEFAULT_STYLE);
             JLabel label;
-            if(sel.GetType() == 'i'){
+            if (sel.GetType() == 'i') {
                 SimpleAttributeSet attrs = new SimpleAttributeSet();
                 StyleConstants.setFontFamily(attrs, "Monospace");
                 StyleConstants.setFontSize(attrs, fontsize);
- 
+
                 label = new JLabel(new ImageIcon(blank));
                 StyleConstants.setComponent(labelStyle, label);
                 doc.insertString(doc.getLength(), "Icon", labelStyle);
-                doc.insertString(doc.getLength(), sel.GetMessage() + "\n", attrs);    
-            }
-            else if(sel.GetType() != '.'){
-                switch(sel.GetType()){
+                doc.insertString(doc.getLength(), sel.GetMessage() + "\n", attrs);
+            } else if (sel.GetType() != '.') {
+                switch (sel.GetType()) {
                     case '1':
                         label = new JLabel(new ImageIcon(folder));
 
-                    break;
+                        break;
                     default:
                         label = new JLabel(new ImageIcon(file));
-                    break;
+                        break;
                 }
                 StyleConstants.setComponent(labelStyle, label);
                 doc.insertString(doc.getLength(), "Icon", labelStyle);
@@ -300,12 +358,13 @@ public class JGopherView extends JTextPane{
                 doc.insertString(doc.getLength(), sel.GetMessage() + "\n", attrs);
             }
         }
-        if(getCursor() == load){
+        if (getCursor() == load) {
             setCursor(normal);
         }
+        runFinished();
     }
-    
-    private void loadImages() throws IOException{
+
+    private void loadImages() throws IOException {
         Image tmp = ImageIO.read(getClass().getClassLoader().getResource("icons/folder.png"));
         folder = tmp.getScaledInstance(fontsize, fontsize, 0);
         tmp = ImageIO.read(getClass().getClassLoader().getResource("icons/blank.png"));
@@ -313,8 +372,8 @@ public class JGopherView extends JTextPane{
         tmp = ImageIO.read(getClass().getClassLoader().getResource("icons/text.png"));
         file = tmp.getScaledInstance(fontsize, fontsize, 0);
     }
-    
-    public void renderFile(String url, String dir, String port) throws IOException, BadLocationException{
+
+    public void renderFile(String url, String dir, String port) throws IOException, BadLocationException {
         setCursor(load);
         GopherConnection gc = new GopherConnection(url, dir, Integer.parseInt(port));
         try {
@@ -322,19 +381,17 @@ public class JGopherView extends JTextPane{
         } catch (IOException ex) {
             Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+
         // History related functions are coming later, I have been on and off
         // testing them for a while so take these as maybe a preview for the 
         // future.
-        
         //history.add(placeInHistory, new GopherURL(url, dir, Integer.parseInt(port)));
         //placeInHistory = history.size() - 1;
-        
         SimpleAttributeSet attrs = new SimpleAttributeSet();
         StyleConstants.setFontFamily(attrs, "Monospace");
         StyleConstants.setFontSize(attrs, fontsize);
         doc.insertString(doc.getLength(), gc.ReadToString() + "\n", attrs);
-        if(getCursor() == load){
+        if (getCursor() == load) {
             setCursor(normal);
         }
     }
