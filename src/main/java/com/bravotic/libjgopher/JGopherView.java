@@ -40,8 +40,12 @@ public class JGopherView extends JTextPane {
     private Image file;
     private Image folder;
     private Image binhex;
+    private Image uue;
+    private Image dos;
     private Image binary;
     private Image blank;
+    private Image index;
+    private Image error;
 
     // Attributes we will place on every selector, allows us to easily pull these
     // from a click and place them directly into the render gopher method.
@@ -335,10 +339,13 @@ public class JGopherView extends JTextPane {
                 doc.insertString(doc.getLength(), sel.GetMessage() + "\n", attrs);
             } else if (sel.GetType() != '.') {
                 switch (sel.GetType()) {
-                    case '1':
-                        label = new JLabel(new ImageIcon(folder));
-
-                        break;
+                    case '1': label = new JLabel(new ImageIcon(folder)); break;
+                    case '3': label = new JLabel(new ImageIcon(error)); break;
+                    case '4': label = new JLabel(new ImageIcon(binhex)); break;
+                    case '5': label = new JLabel(new ImageIcon(dos)); break;
+                    case '6': label = new JLabel(new ImageIcon(uue)); break;
+                    case '7': label = new JLabel(new ImageIcon(index)); break;
+                    case '9': label = new JLabel(new ImageIcon(binary)); break;
                     default:
                         label = new JLabel(new ImageIcon(file));
                         break;
@@ -365,23 +372,30 @@ public class JGopherView extends JTextPane {
     }
 
     private void loadImages() throws IOException {
-        Image tmp = ImageIO.read(getClass().getClassLoader().getResource("icons/folder.png"));
-        folder = tmp.getScaledInstance(fontsize, fontsize, 0);
-        tmp = ImageIO.read(getClass().getClassLoader().getResource("icons/blank.png"));
-        blank = tmp.getScaledInstance(fontsize, fontsize, 0);
-        tmp = ImageIO.read(getClass().getClassLoader().getResource("icons/text.png"));
-        file = tmp.getScaledInstance(fontsize, fontsize, 0);
+        file = ImageIO.read(getClass().getClassLoader().getResource("icons/text.gif")).getScaledInstance(fontsize, fontsize, 0);
+        folder = ImageIO.read(getClass().getClassLoader().getResource("icons/folder.gif")).getScaledInstance(fontsize, fontsize, 0);
+        // Phonebook
+        // Error
+        dos = ImageIO.read(getClass().getClassLoader().getResource("icons/binary.gif")).getScaledInstance(fontsize, fontsize, 0);
+        binhex = ImageIO.read(getClass().getClassLoader().getResource("icons/binhex.gif")).getScaledInstance(fontsize, fontsize, 0);
+        uue = ImageIO.read(getClass().getClassLoader().getResource("icons/uu.gif")).getScaledInstance(fontsize, fontsize, 0);
+        index = ImageIO.read(getClass().getClassLoader().getResource("icons/smallindex.gif")).getScaledInstance(fontsize, fontsize, 0);
+        // Telnet
+        binary = ImageIO.read(getClass().getClassLoader().getResource("icons/unknown.gif")).getScaledInstance(fontsize, fontsize, 0);
+        blank = ImageIO.read(getClass().getClassLoader().getResource("icons/blank.gif")).getScaledInstance(fontsize, fontsize, 0);
+ 
     }
 
     public void renderFile(String url, String dir, String port) throws IOException, BadLocationException {
         setCursor(load);
+        runConnecting();
         GopherConnection gc = new GopherConnection(url, dir, Integer.parseInt(port));
         try {
             gc.ExecuteConnection();
         } catch (IOException ex) {
             Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
         }
-
+        runRendering();
         // History related functions are coming later, I have been on and off
         // testing them for a while so take these as maybe a preview for the 
         // future.
@@ -394,5 +408,6 @@ public class JGopherView extends JTextPane {
         if (getCursor() == load) {
             setCursor(normal);
         }
+        runFinished();
     }
 }
