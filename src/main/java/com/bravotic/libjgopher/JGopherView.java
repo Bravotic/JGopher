@@ -288,6 +288,70 @@ public class JGopherView extends JTextPane {
         return hoverUrl;
     }
     
+    public void openUrl(String parseUrl){
+        String serverUrl;
+        char type;
+        String port = "70";
+        String dir;
+        url = new String();
+        
+        // If URL doesnt start with gopher://, we should make it
+        if(!parseUrl.startsWith("gopher://")){
+            url = "gopher://" + parseUrl;
+        }
+        else{
+            url = parseUrl;
+            parseUrl = parseUrl.substring(9);
+        }
+        
+        // If URL doesnt have a ending / when its just a domain, we NEED to add that
+        if(!parseUrl.contains("/")){
+            url += "/";
+            parseUrl += "/";
+        }
+        serverUrl = parseUrl.substring(0, parseUrl.indexOf("/"));
+        
+        parseUrl = parseUrl.replace(serverUrl, "");
+        
+        System.out.println(serverUrl);
+        
+        if(serverUrl.contains(":")){
+            port = serverUrl.substring(serverUrl.indexOf(":"));
+            serverUrl = serverUrl.substring(0, serverUrl.indexOf(":"));
+        }
+        
+        System.out.println(parseUrl);
+        
+        if(parseUrl.length() == 1){
+            // Nothing else here
+            type = '1';
+            dir = "/";
+        }
+        else{
+            type = parseUrl.charAt(1);
+            dir = parseUrl.substring(2);
+        }
+        setText("");
+        
+        if(type == '1' || type == '7'){
+            try {
+                renderGopher(serverUrl, dir, port);
+            } catch (BadLocationException ex) {
+                Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        else{
+            try {
+                renderFile(serverUrl, dir, port);
+            } catch (IOException | BadLocationException ex) {
+                Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        setCaretPosition(0);
+        runUpdateUrlMethods();
+        
+    }
+    
     public void renderGopher(String url, String dir, String port) throws BadLocationException {
 
         addFocusListener(new FocusListener() {

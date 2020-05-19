@@ -7,18 +7,25 @@ public class GopherSelector {
     private final String[] data;
     
     public GopherSelector(String rawSelector){
-        type = rawSelector.charAt(0);
-        if(rawSelector.equals(".")){
+        if(rawSelector.length() > 0){
+            type = rawSelector.charAt(0);
+            if(rawSelector.equals(".")){
+                data = new String[4];
+                data[0] = ".";
+            }
+            else{
+                data = rawSelector.split("\t");
+            }
+            if(data.length < 4){
+                throw new java.lang.Error("Gopher Data is unparsable, Data is of size " + data.length + "\n" + Arrays.toString(data));
+            }
+            data[0] = data[0].substring(1);
+        }
+        else{
+            type = '.';
             data = new String[4];
             data[0] = ".";
         }
-        else{
-            data = rawSelector.split("\t");
-        }
-        if(data.length < 4){
-            throw new java.lang.Error("Gopher Data is unparsable, Data is of size " + data.length + "\n" + Arrays.toString(data));
-        }
-        data[0] = data[0].substring(1);
     }
     
     public char GetType(){

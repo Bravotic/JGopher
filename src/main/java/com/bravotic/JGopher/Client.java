@@ -43,14 +43,6 @@ public class Client extends JPanel implements ActionListener{
     
         super(new BorderLayout());
         inConnectionEvent = false;
-        ArrayList<String> lookAndFeelsDisplay = new ArrayList<>();
-        ArrayList<String> lookAndFeelsRealNames = new ArrayList<>();
-
-        for (LookAndFeelInfo each : UIManager.getInstalledLookAndFeels()) {
-            lookAndFeelsDisplay.add(each.getName());
-            lookAndFeelsRealNames.add(each.getClassName());
-        }
-
         
         JToolBar navBar = new JToolBar("NavBar");
         JToolBar statusBar = new JToolBar("StatusBar");
@@ -91,7 +83,7 @@ public class Client extends JPanel implements ActionListener{
         statusBar.add(progressBar);
         statusBar.add(status);
 
-        urlBar.setText("gopher://floodgap.com/");
+        //urlBar.setText("gopher://floodgap.com/");
         
         
         gviewer = new JGopherView(this);
@@ -100,8 +92,11 @@ public class Client extends JPanel implements ActionListener{
         // gopher URLs, probably something like gotoUrl or loadUrl.  As well an
         // option to set homepage will eventaully be added to the client, but
         // for now floodgap is the homepage.
-        gviewer.renderGopher("floodgap.com", "/", "70");
+        //gviewer.renderGopher("floodgap.com", "/", "70");
         //gviewer.addUrlUpdateMethod(this, "updateUrlBar");
+        
+        gviewer.openUrl("gopher://floodgap.com/");
+        
         gviewer.addEvent(new GopherUrlEvent(){
            public void run(){
                urlBar.setText(gviewer.getURL());
@@ -138,6 +133,8 @@ public class Client extends JPanel implements ActionListener{
             }
         });
         gviewer.setCaretPosition(0);
+        
+        
         
         JScrollPane mainView = new JScrollPane(gviewer);
         add(navBar, BorderLayout.PAGE_START);
@@ -186,7 +183,7 @@ public class Client extends JPanel implements ActionListener{
     public void actionPerformed(ActionEvent e) {
         String cmd = e.getActionCommand();
         
-        if(cmd.equals("GO")){
+        /*if(cmd.equals("GO")){
             String raw = urlBar.getText();
             GopherURL test = parseToGopherURL(raw);
             try{
@@ -198,6 +195,11 @@ public class Client extends JPanel implements ActionListener{
             catch (BadLocationException ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
             }
+        }*/
+        
+        if(cmd.equals("GO")){
+            String raw = urlBar.getText();
+            gviewer.openUrl(raw);
         }
         // History related functions are coming later, I have been on and off
         // testing them for a while so take these as maybe a preview for the 
