@@ -27,7 +27,6 @@ import javax.swing.text.StyleContext;
 import javax.swing.JLabel;
 import java.lang.reflect.Method;
 import java.awt.Cursor;
-import java.lang.reflect.InvocationTargetException;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
@@ -333,19 +332,49 @@ public class JGopherView extends JTextPane {
         }
         setText("");
         
-        if(type == '1' || type == '7'){
-            try {
-                renderGopher(serverUrl, dir, port);
-            } catch (BadLocationException ex) {
-                Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+        final String server = serverUrl;
+        final String portFinal = port;
+        
+        if(type == '1'){
+            Thread render = new Thread(() -> {
+                url = "gopher://" + server + "/" + type + dir;
+                try {
+                    renderGopher(server, dir, portFinal);
+                } catch (BadLocationException ex) {
+                    Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                            
+                runUpdateUrlMethods();
+            });
+            render.start();
+        }
+        else if(type == '7'){
+                       
+            search = JOptionPane.showInputDialog(parent,"Enter a search query: ", null);             
+            if(search == null){
+                search = "";
             }
+                        
+            Thread render = new Thread(() -> {
+                url = "gopher://" + server + "/" + type + dir + "?" + search;
+                try {
+                    renderGopher(server, dir + "?" + search, portFinal);
+                } catch (BadLocationException ex) {
+                    Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+                }   
+            });
+            render.start();
         }
         else{
-            try {
-                renderFile(serverUrl, dir, port);
-            } catch (IOException | BadLocationException ex) {
-                Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            Thread render = new Thread(() -> {
+                url = "gopher://" + server + "/" + type + dir;
+                try {
+                    renderFile(server, dir, portFinal);
+                } catch (IOException | BadLocationException ex) {
+                    Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            });
+            render.start();
         }
         setCaretPosition(0);
         runUpdateUrlMethods();
