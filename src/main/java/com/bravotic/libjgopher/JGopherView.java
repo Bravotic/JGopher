@@ -339,7 +339,7 @@ public class JGopherView extends JTextPane {
         
         
         if(serverUrl.contains(":")){
-            port = serverUrl.substring(serverUrl.indexOf(":"));
+            port = serverUrl.substring(serverUrl.indexOf(":") + 1);
             serverUrl = serverUrl.substring(0, serverUrl.indexOf(":"));
         }  
         
