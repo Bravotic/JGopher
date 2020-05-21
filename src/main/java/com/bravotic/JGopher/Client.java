@@ -22,6 +22,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.Dimension;
 import java.util.ArrayList;
+import javax.swing.AbstractAction;
 import javax.swing.Box;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -31,13 +32,13 @@ import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.UnsupportedLookAndFeelException;
 
 public class Client extends JPanel implements ActionListener{
-    private JTextField urlBar = new JTextField(30);
+    private JTextField urlBar;
     private JGopherView gviewer;
     
     private boolean inConnectionEvent;
     
-    //private ArrayList<GopherURL> history;
-    //private int placeInHistory;
+    private ArrayList<GopherURL> history;
+    private int placeInHistory;
     
     public Client() throws BadLocationException, IOException{
     
@@ -47,21 +48,13 @@ public class Client extends JPanel implements ActionListener{
         JToolBar navBar = new JToolBar("NavBar");
         JToolBar statusBar = new JToolBar("StatusBar");
         
+        urlBar = new JTextField(30);
         
         JProgressBar progressBar = new JProgressBar(0, 100);
         progressBar.setValue(0);
         progressBar.setMaximumSize(new Dimension(125, 125));
-        //progressBar.setIndeterminate(true);
         JLabel status = new JLabel();
         
-
-        
-        // History related functions are coming later, I have been on and off
-        // testing them for a while so take these as maybe a preview for the 
-        // future.
-        
-        //history = new ArrayList<GopherURL>();
-        //placeInHistory = 0;
         
         JButton back = new JButton(new ImageIcon(getClass().getClassLoader().getResource("icons/left.png")));
         JButton forward = new JButton(new ImageIcon(getClass().getClassLoader().getResource("icons/right.png")));
@@ -70,8 +63,8 @@ public class Client extends JPanel implements ActionListener{
         back.addActionListener(this);
         back.setActionCommand("BACK");
         
-        back.addActionListener(this);
-        back.setActionCommand("FORWARD");
+        forward.addActionListener(this);
+        forward.setActionCommand("FORWARD");
         
         go.addActionListener(this);
         go.setActionCommand("GO");
@@ -85,15 +78,15 @@ public class Client extends JPanel implements ActionListener{
 
         //urlBar.setText("gopher://floodgap.com/");
         
+        urlBar.addActionListener(new AbstractAction(){
+            public void actionPerformed(ActionEvent e){
+                String raw = urlBar.getText();
+                gviewer.openUrl(raw);
+            }
+        });
         
         gviewer = new JGopherView(this);
         
-        // Eventually renderGopher will be replaced with a method able to decode
-        // gopher URLs, probably something like gotoUrl or loadUrl.  As well an
-        // option to set homepage will eventaully be added to the client, but
-        // for now floodgap is the homepage.
-        //gviewer.renderGopher("floodgap.com", "/", "70");
-        //gviewer.addUrlUpdateMethod(this, "updateUrlBar");
         
         gviewer.openUrl("gopher://floodgap.com/");
         
@@ -147,38 +140,6 @@ public class Client extends JPanel implements ActionListener{
         urlBar.setText(gviewer.getURL());
     }
     
-    // Yes, I know this is horrible, I just wanted something quick to test, soon
-    // this will be completely rewritten, rest assured.
-    public GopherURL parseToGopherURL(String raw){
-        String url = new String();
-        char type = 0x0;
-        String dir = new String();
-        boolean urlStage = false;
-        
-        for(int i = 0; i < raw.length(); i++){
-            if(i > 1 && raw.charAt(i) == '/' && raw.charAt(i - 1) == '/'){
-                i++;
-                while(raw.charAt(i) != '/'){
-                    url += raw.charAt(i);
-                    i++;
-                }
-                if(i <= raw.length() - 2){
-                i++;
-                type = raw.charAt(i);
-                }
-                else{
-                    type = '1';
-                }
-                urlStage = true;
-                
-            }
-            else if(urlStage){
-                dir += raw.charAt(i);
-            }
-        }
-        return new GopherURL(url, dir, 70, type);
-    }
-    
     @Override
     public void actionPerformed(ActionEvent e) {
         String cmd = e.getActionCommand();
@@ -201,20 +162,12 @@ public class Client extends JPanel implements ActionListener{
             String raw = urlBar.getText();
             gviewer.openUrl(raw);
         }
-        // History related functions are coming later, I have been on and off
-        // testing them for a while so take these as maybe a preview for the 
-        // future.
-        
-        /*
-        placeInHistory--;
-        history.remove(history.size() - 1);
-        try{
-            renderGopher(history.get(placeInHistory).getURL(), history.get(placeInHistory).getDir(),            Integer.toString(history.get(placeInHistory).getPort()));
+        else if(cmd.equals("BACK")){
+            gviewer.goBack();
         }
-        catch (BadLocationException ex) {
-                        Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                    */
+        else if(cmd.equals("FORWARD")){
+            gviewer.goForward();
+        }
     }
     
     protected static void createAndShowGUI() throws BadLocationException, IOException{

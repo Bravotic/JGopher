@@ -62,6 +62,9 @@ public class JGopherView extends JTextPane {
     private final ArrayList<GopherUrlEvent> urlEvents;
     private final ArrayList<GopherConnectionEvent> connEvents;
     private final ArrayList<GopherHoverEvent> hoverEvents;
+    
+    private final ArrayList<String> history;
+    private int historyPointer;
 
     private Cursor pointer;
     private Cursor normal;
@@ -128,6 +131,21 @@ public class JGopherView extends JTextPane {
         parent = tobeParent;
     }
     
+    public void goBack(){
+        if(historyPointer > 1){
+            historyPointer--;
+            historyPointer--;
+            openUrl(history.get(historyPointer));
+            
+        }
+    }
+    public void goForward(){
+        if(historyPointer < history.size()){
+            openUrl(history.get(historyPointer));
+           
+        }
+    }
+    
     public void setUrlUpdate(String in_url) {
         url = in_url;
     }
@@ -147,6 +165,9 @@ public class JGopherView extends JTextPane {
         urlEvents = new ArrayList<>();
         connEvents = new ArrayList<>();
         hoverEvents = new ArrayList<>();
+        
+        history = new ArrayList<>();
+        historyPointer = 0;
 
         pointer = new Cursor(Cursor.HAND_CURSOR);
         normal = new Cursor(Cursor.DEFAULT_CURSOR);
@@ -155,6 +176,8 @@ public class JGopherView extends JTextPane {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                 
+                
                 JTextPane view = (JTextPane) e.getSource();
                 Point pt = new Point(e.getX(), e.getY());
 
@@ -227,6 +250,7 @@ public class JGopherView extends JTextPane {
                         render.start();
                         
                     }
+                   
                     validate();
 
                 }
@@ -264,6 +288,7 @@ public class JGopherView extends JTextPane {
                             runHoverOff();
                         }
                     }
+                    
                 }
             }
         });
@@ -312,14 +337,11 @@ public class JGopherView extends JTextPane {
         
         parseUrl = parseUrl.replace(serverUrl, "");
         
-        System.out.println(serverUrl);
         
         if(serverUrl.contains(":")){
             port = serverUrl.substring(serverUrl.indexOf(":"));
             serverUrl = serverUrl.substring(0, serverUrl.indexOf(":"));
-        }
-        
-        System.out.println(parseUrl);
+        }  
         
         if(parseUrl.length() == 1){
             // Nothing else here
@@ -383,6 +405,20 @@ public class JGopherView extends JTextPane {
     
     public void renderGopher(String url, String dir, String port) throws BadLocationException {
 
+        if(historyPointer == history.size()){
+            history.add(this.url);
+        }
+        else{
+            if(!history.get(historyPointer).equals(this.url)){
+                for(int i = historyPointer + 1; i < history.size(); i++){
+                    history.remove(i);
+                }
+            }
+            history.set(historyPointer, this.url);
+            
+        }
+        historyPointer++;
+        
         addFocusListener(new FocusListener() {
 
             @Override
@@ -410,11 +446,6 @@ public class JGopherView extends JTextPane {
         runRendering();
         GopherSelector[] sels = gc.ReadToGopherSelectorArray();
 
-        // History related functions are coming later, I have been on and off
-        // testing them for a while so take these as maybe a preview for the 
-        // future.
-        //history.add(new GopherURL(url, dir, Integer.parseInt(port)));
-        //placeInHistory = history.size() - 1;
         doc = getDocument();
         for (GopherSelector sel : sels) {
 
@@ -480,6 +511,19 @@ public class JGopherView extends JTextPane {
     }
 
     public void renderFile(String url, String dir, String port) throws IOException, BadLocationException {
+        if(historyPointer == history.size()){
+            history.add(this.url);
+        }
+        else{
+            if(!history.get(historyPointer).equals(this.url)){
+                for(int i = historyPointer + 1; i < history.size(); i++){
+                    history.remove(i);
+                }
+            }
+            history.set(historyPointer, this.url);
+            
+        }
+        historyPointer++;
         setCursor(load);
         runConnecting();
         GopherConnection gc = new GopherConnection(url, dir, Integer.parseInt(port));
@@ -489,11 +533,7 @@ public class JGopherView extends JTextPane {
             Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
         }
         runRendering();
-        // History related functions are coming later, I have been on and off
-        // testing them for a while so take these as maybe a preview for the 
-        // future.
-        //history.add(placeInHistory, new GopherURL(url, dir, Integer.parseInt(port)));
-        //placeInHistory = history.size() - 1;
+        
         SimpleAttributeSet attrs = new SimpleAttributeSet();
         StyleConstants.setFontFamily(attrs, "Monospace");
         StyleConstants.setFontSize(attrs, fontsize);
