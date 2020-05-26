@@ -27,6 +27,9 @@ import javax.swing.text.StyleContext;
 import javax.swing.JLabel;
 import java.lang.reflect.Method;
 import java.awt.Cursor;
+import java.awt.Desktop;
+import java.net.URI;
+import java.net.URISyntaxException;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
@@ -234,6 +237,46 @@ public class JGopherView extends JTextPane {
                         });
                         render.start();
                     }
+                    else if((type + dir).toLowerCase().contains("hurl")){
+                        Object[] options = {"Ok","Cancel", "View as text file"};
+                        int n = JOptionPane.showOptionDialog(parent,
+                        "You are about to leave the gopher space and load " + dir.substring(4) + " in your default browser",
+                        "Now Leaving Gopherspace",
+                        JOptionPane.YES_NO_CANCEL_OPTION,
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        options,
+                        options[1]);
+                        switch(n){
+                            case 0:
+                                if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                                    try {
+                                        Desktop.getDesktop().browse(new URI(dir.substring(4)));
+                                    } catch (URISyntaxException | IOException ex) {
+                                        ex.printStackTrace();
+                                    }
+                                }
+                            break;
+                            case 1:
+                                
+                                break;
+                            case 2:
+                                Thread render = new Thread(() -> {
+                                    view.setText("");
+                                    url = "gopher://" + server + "/" + type + dir;
+                                    try {
+                                        renderFile(server, dir, port);
+                                    } catch (IOException | BadLocationException ex) {
+                                        Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+                                    }
+                                    view.setCaretPosition(0);
+                            
+                                    runUpdateUrlMethods();
+                                });
+                                render.start();
+                                break;
+                        }
+                    }
                     else {
                         Thread render = new Thread(() -> {
                             view.setText("");
@@ -386,6 +429,39 @@ public class JGopherView extends JTextPane {
                 }   
             });
             render.start();
+        }
+        else if((type + dir).toLowerCase().contains("hurl")){
+            Object[] options = {"Ok","Cancel", "View as text file"};
+            int n = JOptionPane.showOptionDialog(parent,
+            "You are about to leave the gopher space and load " + dir.substring(4) + " in your default browser",
+            "Now Leaving Gopherspace",
+            JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[1]);
+            switch(n){
+                case 0:
+                    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                        try {
+                            Desktop.getDesktop().browse(new URI(dir.substring(4)));
+                        } catch (URISyntaxException | IOException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                break;
+                case 2:
+                    Thread render = new Thread(() -> {
+                        url = "gopher://" + server + "/" + type + dir;
+                        try {
+                            renderFile(server, dir, portFinal);
+                        } catch (IOException | BadLocationException ex) {
+                            Logger.getLogger(JGopherView.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    });
+                    render.start();
+                break;
+            }
         }
         else{
             Thread render = new Thread(() -> {
