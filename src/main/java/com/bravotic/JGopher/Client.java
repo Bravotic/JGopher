@@ -45,6 +45,12 @@ public class Client extends JPanel implements ActionListener{
         super(new BorderLayout());
         inConnectionEvent = false;
         
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
+            
+        }
+        
         JToolBar navBar = new JToolBar("NavBar");
         JToolBar statusBar = new JToolBar("StatusBar");
         
